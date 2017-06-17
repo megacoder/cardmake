@@ -1,0 +1,123 @@
+README
+
+This directory holds files exported by
+Douglas W. Jones, jones@cs.uiowa.edu
+pertaining to supporting emulated punched cards
+
+The following are available:
+
+	cardlist.txt -- filter to translate from card image format
+		into ASCII, using a variety of Hollerity codes,
+		written in C to run under UNIX.
+
+	cardmake.txt -- filter to translate from ASCII text to
+		card image format as punched using a variety
+		of Hollerith codes, written in C to run under UNIX.
+
+	cardcode.i.txt -- the translation tables shared by the
+		above.  Currently, the DEC variant of the 029 code,
+		the 026 commercial and FORTRAN codes and a subset
+		of the full upper/lower case EBCDIC code are supported;
+		others should be added.
+
+	cardcat.txt -- a program to concatenate emulated punched card
+		decks.  This program deletes each input card deck after
+		appending it to the output, in keeping with the way real
+		cards are handled.
+
+The card image format allows for graphical display of cards as if
+they were punched on a variety of different cardstock (colors,
+top-edge stripes, alternative corner cuts, a small variety of
+special forms, and a small variety of overprinted artwork).  Most of
+these options can be set by cardmake and optionally listed by cardlist.
+Someone should write a keypunch emulator that allows selection of the
+stock to be punched, and a graphical card-deck "editor" that shows the
+cosmetic details of the cards being shuffled.  The format is defined
+as follows
+
+One column of a card holds 12 bits; in the file, we lay them out as
+follows, with a ones representing punched holes:
+
+      Top                  Bottom
+        _ _ _ _ _ _ _ _ _ _ _ _
+       |_|_|_|_|_|_|_|_|_|_|_|_|
+      12 11 0 1 2 3 4 5 6 7 8 9
+       |     |                 |
+       |Zone |     Numeric     |
+
+A design dilemma:  There are two rational ways to map card columns
+to byte sequences, highbyter (or bigendian) and lowbyter (or
+littleendian).  The choice is arbitrary.  Here, we will be bigendian
+as follows:
+
+               column 1                column 2
+       |_ _ _ _ _ _ _ _ _ _ _ _|_ _ _ _ _ _ _ _ _ _ _ _|
+       |_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|
+       |               |               |               |
+             byte 1          byte 2          byte 3
+
+There are multiple mappings from ASCII to card codes, reflecting
+different standard IBM keypunches and reflecting different
+interpretations of non-ASCII graphics such as cent-sign and
+logical-not.
+
+Card files need a distinguished magic number or prefix to prevent
+accidental interpretation of random files as virtual card decks.
+Here, we will use the ASCII prefix "H80", in honor of the FORTRAN
+Hollerith format used to read one card image as uninterpreted text.
+(This allows H40 to be used later for 40 column optical mark cards,
+and perhaps other variants for other less common Hollerith formats.)
+
+To support keypunch emulators and card deck display and editing
+programs, a 3 byte prefix is needed on each card.  Emulators that
+read the holes on a card should ignore this prefix (other than
+using it to verify that a card-file is indeed being read).  The
+prefix format is as follows:
+
+             byte 1          byte 2         byte 3
+       |_ _ _ _ _ _ _ _|_ _ _ _ _ _ _ _|_ _ _ _ _ _ _ _|
+       |1|_|_|_|_|_|_|_|1|_|_|_|_|_|_|_|1|_|_|_|_|_|_|_|
+       | | Color | |cut| | |   | form  | |    logo     |
+                  |       |  |
+                corner    |punch
+                        interp
+
+      Color:  cream                   0000 default!
+              yellow                  0001
+              pink                    0010
+              pale-blue               0011
+              pale-green              0100
+              light brown             0101 rare
+              yellow stripe           1001 very common!
+              pink stripe             1010
+              pale-blue stripe        1011
+              pale-green stripe       1100
+              light-brown stripe      1101
+
+      Corner: round   0  default (rounded corners lasted longer)
+              square  1  uncommon but not unheard of
+
+      Cut:    neither 00 rare
+              right   01 common
+              left    10 default
+              both    11 rarest
+
+      Interp: no      0  default (not overprinted by an interpreter)
+              yes     1  (the card was run through a printing interpreter)
+
+      Punch:  none    00 (the punch didn't print on the card)
+              026     01 older
+              029     10 default
+
+      Forms:  no printing                             0000
+              0-9 printed in corresponding positions  0001 \
+              Column markers every 5 columns          0010  > default may
+              Fortran column markers and comments     0011 /  vary
+              COBOL column markers and comments       0100
+              RPG column markers and comments         0101
+
+      Logo:   none                                    0000000 \ default may
+              (your institution's logo here)          0000001 / vary!
+
+Please, if you ever come up with keypunch emulators that support custom
+logos, inform me of the logos you use and reserve their numbers!
